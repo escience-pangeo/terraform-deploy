@@ -34,21 +34,28 @@ resource "aws_efs_mount_target" "home_dirs_targets" {
   security_groups = [ aws_security_group.home_dirs_sg.id ]
 }
 
-data "helm_repository" "stable" {
-  name = "stable"
-  url  = "https://kubernetes-charts.storage.googleapis.com"
-}
-
 resource "kubernetes_namespace" "support" {
   metadata {
     name = "support"
   }
 }
 
+resource "kubernetes_namespace" "staging" {
+  metadata {
+    name = "staging"
+  }
+}
+
+resource "kubernetes_namespace" "prod" {
+  metadata {
+    name = "prod"
+  }
+}
+
 resource "helm_release" "efs-provisioner" {
   name       = "efs-provisioner"
   namespace  = kubernetes_namespace.support.metadata.0.name
-  repository = data.helm_repository.stable.metadata[0].name
+  repository = "https://kubernetes-charts.storage.googleapis.com"
   chart      = "efs-provisioner"
   version    = "0.11.0"
 
@@ -83,7 +90,7 @@ resource "helm_release" "efs-provisioner" {
 
 resource "kubernetes_persistent_volume" "shared-efs-volume" {
   metadata {
-    name = "icesat2-staging-shared-nfs"
+    name = "staging-shared-nfs"
   }
 
   spec {
@@ -104,7 +111,7 @@ resource "kubernetes_persistent_volume" "shared-efs-volume" {
 resource "kubernetes_persistent_volume_claim" "shared-efs-claim" {
   metadata {
     name = "shared-nfs"
-    namespace = "hackweek-hub-staging"
+    namespace = "staging"
   }
 
   spec {
@@ -121,7 +128,7 @@ resource "kubernetes_persistent_volume_claim" "shared-efs-claim" {
 
 resource "kubernetes_persistent_volume" "shared-efs-volume-prod" {
   metadata {
-    name = "icesat2-prod-shared-nfs"
+    name = "prod-shared-nfs"
   }
 
   spec {
@@ -142,7 +149,7 @@ resource "kubernetes_persistent_volume" "shared-efs-volume-prod" {
 resource "kubernetes_persistent_volume_claim" "shared-efs-claim-prod" {
   metadata {
     name = "shared-nfs"
-    namespace = "hackweek-hub-prod"
+    namespace = "prod"
   }
 
   spec {

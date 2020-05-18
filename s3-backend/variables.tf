@@ -1,5 +1,5 @@
 variable "profile" {
-  default = "default"
+  default = "escience"
 }
 
 variable "region" {
@@ -7,5 +7,5 @@ variable "region" {
 }
 
 variable "bucket_name" {
-  default = "hackweek-terraform-state-bucket"
+  default = "dssg2020-eicompare"
 }

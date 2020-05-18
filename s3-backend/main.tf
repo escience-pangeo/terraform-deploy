@@ -9,14 +9,15 @@ terraform {
 # DON'T INCLUDE THIS PART IN THIS FOLDER
 # Put the following into the other folders where you want the state stored.
 # Can't store this state, unfortunately
-#terraform {
-#  backend "s3" {
-#    bucket         = "hackweek-terraform-state-bucket"
-#    key            = ""
-#    region         = "us-west-2"
-#    encrypt        = true
-#  }
-#}
+terraform {
+  backend "s3" {
+    bucket         = "dssg2020-eicompare"
+    key            = "terraform/s3backend/terraform.tfstate"
+    region         = "us-west-2"
+    profile        = "escience"
+    encrypt        = true
+  }
+}
 
 provider "aws" {
   version     = "~> 2.40"

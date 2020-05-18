@@ -1,14 +1,23 @@
 # There are several ways that we could implement a minimal policy set
 # The minimal policy set is found here: 
 # https://github.com/terraform-aws-modules/terraform-aws-eks/blob/master/docs/iam-permissions.md
-# Here are a few implementations
 
+terraform {
+  required_version = ">= 0.12.6"
+  backend "s3" {
+    bucket         = "dssg2020-eicompare"
+    key            = "terraform/iam/terraform.tfstate"
+    region         = "us-west-2"
+    profile        = "escience"
+    encrypt        = true
+  }
+}
 
-# Create a new user named terraform-bot
-# Create policy in IAM and attach to terraform-bot
-# TODO: You will need to manually generate access keys for this user
-# TODO: You will need to manually configure awscli to use these access keys
-# This is what I do for pangeo
+provider "aws" {
+  version = ">= 2.60"
+  region  = var.region
+  profile = var.profile
+}
 
 resource "aws_iam_user" "user" {
   name = "terraform-bot"
@@ -31,40 +40,6 @@ resource "aws_iam_user_policy_attachment" "attach-efs-policies" {
   policy_arn  = "arn:aws:iam::aws:policy/AmazonElasticFileSystemFullAccess"
 }
 
-# Create a role with the policy json
-# Allow a user to assume this role
-# TODO: You will need to manually allow a user to assume this role
-# Probably want to make a standalone user like above
-# Probably not recommended
-
-#resource "aws_iam_role" "terraform_role" {
-#  name = "terraform-deployment-role"
-#  path = "/"
-#  assume_role_policy = data.aws_iam_policy_document.terraform_iam_policy_source.json
-#}
-
-
-# Create the policy in IAM
-# Attach the policy to the default awscli configuration profile
-# Will leave the policy on the user EVEN AFTER finishing the terraform configuration
-# For this reason, I think this is not recommended
-
-#resource "aws_iam_policy" "terraform_iam_policy" {
-#    name = "terraform-policy"
-#    path = "/"
-#    description = "Permissions for Terraform-controlled EKS cluster creation and management"
-#    policy = data.aws_iam_policy_document.terraform_iam_policy_source.json
-#}
-
-#resource "aws_iam_user_policy_attachment" "attach-terraform-permissions" {
-#  user        = split("/", data.aws_caller_identity.current.arn)[1]
-#  policy_arn  = aws_iam_policy.terraform_iam_policy.arn
-#}
-
-#data "aws_caller_identity" "current" {}
-
-
-# This is the data for the policy needed to run terraform to create an eks cluster
 data "aws_iam_policy_document" "terraform_iam_policy_source" {
 	version = "2012-10-17"
 
@@ -145,10 +120,12 @@ data "aws_iam_policy_document" "terraform_iam_policy_source" {
       "eks:DeleteCluster",
       "eks:DescribeCluster",
       "eks:ListClusters",
+      "eks:ListFargateProfiles",
+      "eks:ListNodegroups",
+      "eks:ListTagsForResource",
       "eks:TagResource",
       "eks:UntagResource",
       "eks:UpdateClusterConfig",
-      "eks:DescribeUpdate",
       "iam:AddRoleToInstanceProfile",
       "iam:AttachRolePolicy",
       "iam:CreateInstanceProfile",
@@ -175,15 +152,7 @@ data "aws_iam_policy_document" "terraform_iam_policy_source" {
       "iam:PutRolePolicy",
       "iam:RemoveRoleFromInstanceProfile",
       "iam:TagRole",
-      "iam:UpdateAssumeRolePolicy",
-      "s3:CreateBucket",
-      "s3:DeleteBucket",
-      "s3:DescribeJob",
-      "s3:Get*",
-      "s3:HeadBucket",
-      "s3:List*",
-      "s3:PutBucketAcl",
-      "s3:PutBucketTagging"
+      "iam:UpdateAssumeRolePolicy"
     ]
 
     resources = ["*"]

@@ -1,10 +1,10 @@
 terraform {
   required_version = ">= 0.12.6"
-
   backend "s3" {
-    bucket         = "hackweek-terraform-state-bucket"
-    key            = "hackweek-cluster-config.tfstate"
+    bucket         = "dssg2020-eicompare"
+    key            = "terraform/eks/terraform.tfstate"
     region         = "us-west-2"
+    profile        = "escience"
     encrypt        = true
   }
 }
@@ -75,7 +75,7 @@ module "vpc" {
 module "eks" {
   source          = "terraform-aws-modules/eks/aws"
   cluster_name    = var.cluster_name
-  cluster_version = "1.14"
+  cluster_version = "1.15"
   version         = "11.1.0"
 
   subnets         = module.vpc.private_subnets
@@ -94,22 +94,18 @@ module "eks" {
     disk_size = 50
   }
 
-  workers_group_defaults = {
-    ami_id = "ami-00b8b0753e596522c"
-  }
-
   worker_groups = [
     {
       name                    = "core"
       asg_max_size            = 1
       asg_min_size            = 1
       asg_desired_capacity    = 1
-      instance_type           = "t3a.xlarge"
+      instance_type           = "t3a.large"
       subnets                 = [module.vpc.private_subnets[0]]
 
       # Use this to set labels / taints
-      kubelet_extra_args      = "--node-labels=node-role.kubernetes.io/core=core,hub.jupyter.org/node-purpose=core"
-      
+      kubelet_extra_args      = "--node-labels=role=core,hub.jupyter.org/node-purpose=core"
+
       tags = [
         {
           "key"                 = "k8s.io/cluster-autoscaler/enabled"
@@ -128,59 +124,25 @@ module "eks" {
   worker_groups_launch_template = [
     {
       name                    = "user-spot"
-      override_instance_types = ["m5.2xlarge", "m4.2xlarge"]
+      override_instance_types = ["m5.2xlarge", "m5a.2xlarge"]
       spot_instance_pools     = 2
-      asg_max_size            = 100
+      asg_max_size            = 10
       asg_min_size            = 0
       asg_desired_capacity    = 0
 
       # Use this to set labels / taints
-      kubelet_extra_args = "--node-labels=node-role.kubernetes.io/user=user,hub.jupyter.org/node-purpose=user --register-with-taints hub.jupyter.org/dedicated=user:NoSchedule"
+      kubelet_extra_args = "--node-labels=role=user,hub.jupyter.org/node-purpose=user --register-with-taints hub.jupyter.org/dedicated=user:NoSchedule"
 
       tags = [
         {
-          "key"                 = "k8s.io/cluster-autoscaler/node-template/label/hub.jupyter.org/node-purpose" 
+          "key"                 = "k8s.io/cluster-autoscaler/node-template/label/hub.jupyter.org/node-purpose"
           "propagate_at_launch" = "false"
           "value"               = "user"
         },
         {
-          "key"                 = "k8s.io/cluster-autoscaler/node-template/taint/hub.jupyter.org/dedicated" 
+          "key"                 = "k8s.io/cluster-autoscaler/node-template/taint/hub.jupyter.org/dedicated"
           "propagate_at_launch" = "false"
           "value"               = "user:NoSchedule"
-        },
-        {
-          "key"                 = "k8s.io/cluster-autoscaler/enabled"
-          "propagate_at_launch" = "false"
-          "value"               = "true"
-        },
-        {
-          "key"                 = "k8s.io/cluster-autoscaler/${var.cluster_name}"
-          "propagate_at_launch" = "false"
-          "value"               = "true"
-        }
-      ]
-    },
-    {
-      name                    = "worker-spot"
-      override_instance_types = ["r5.2xlarge", "r4.2xlarge"]
-      spot_instance_pools     = 2
-      asg_max_size            = 100
-      asg_min_size            = 0
-      asg_desired_capacity    = 0
-
-      # Use this to set labels / taints
-      kubelet_extra_args = "--node-labels node-role.kubernetes.io/worker=worker,k8s.dask.org/node-purpose=worker --register-with-taints k8s.dask.org/dedicated=worker:NoSchedule"
-
-      tags = [
-        {
-          "key"                 = "k8s.io/cluster-autoscaler/node-template/label/k8s.dask.org/node-purpose" 
-          "propagate_at_launch" = "false"
-          "value"               = "worker"
-        },
-        {
-          "key"                 = "k8s.io/cluster-autoscaler/node-template/taint/k8s.dask.org/dedicated" 
-          "propagate_at_launch" = "false"
-          "value"               = "worker:NoSchedule"
         },
         {
           "key"                 = "k8s.io/cluster-autoscaler/enabled"

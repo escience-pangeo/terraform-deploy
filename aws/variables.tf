@@ -1,17 +1,17 @@
 variable "region" {
-  default = "us-east-1"
+  default = "us-west-2"
 }
 
 variable "profile" {
-  default = "default"
+  default = "escience-bot"
 }
 
 variable "cluster_name" {
-  default = "test-cluster-change-name"
+  default = "dssg2020-eicompare"
 }
 
 variable "vpc_name" {
-  default = "vpc-test-cluster-change-name"
+  default = "dssg2020-eicompare"
 }
 
 variable "map_accounts" {
@@ -50,4 +50,12 @@ variable "grafana_admin" {
 
 variable "grafana_password" {
   default = ""
+}
+
+variable "namespace_prod" {
+  default = "production"
+}
+
+variable "namespace_staging" {
+  default = "staging"
 }

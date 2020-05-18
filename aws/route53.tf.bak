@@ -1,0 +1,73 @@
+# For Kubernetes external DNS (map LoadBalancerIP to custom domain)
+# https://github.com/kubernetes-sigs/external-dns/blob/master/docs/tutorials/aws.md
+# a4dde768e605f470caf8b3c4be4163cb-983091136.us-west-2.elb.amazonaws.com -> staging.dssg.hackweek.io
+
+resource "aws_iam_policy" "route53_policy" {
+  name        = "route53-policy"
+  description = "update route 53 record sets in hosted zones"
+  policy      = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "route53:ChangeResourceRecordSets"
+      ],
+      "Resource": [
+        "arn:aws:route53:::hostedzone/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "route53:ListHostedZones",
+        "route53:ListResourceRecordSets"
+      ],
+      "Resource": [
+        "*"
+      ]
+    }
+  ]
+}
+EOF
+}
+
+# IAM Role that can be assumed by the ExternalDNS Pod
+module "iam_assumable_role" {
+  source                        = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
+  version                       = "~> v2.6.0"
+  create_role                   = true
+  role_name                     = "dssg-externalDNS-serviceaccount"
+  provider_url                  = replace(module.eks.cluster_oidc_issuer_url, "https://", "")
+  role_policy_arns              = [aws_iam_policy.route53_policy.arn]
+
+  tags = {
+    Owner = split("/", data.aws_caller_identity.current.arn)[1]
+    AutoTag_Creator = data.aws_caller_identity.current.arn
+  }
+}
+
+# https://stackoverflow.com/questions/54094575/how-to-run-kubectl-apply-commands-in-terraform
+data "template_file" "externaldns" {
+  template = "${file("${path.module}/externaldns.yaml.tpl")}"
+  vars = {
+    iam-service-role = module.iam_assumable_role.this_iam_role_arn
+  }
+}
+
+# Note: might need to deploy per-namespace? 
+resource "null_resource" "externaldns" {
+  triggers = {
+    manifest_sha1 = "${sha1("${data.template_file.externaldns.rendered}")}"
+}
+
+    provisioner "local-exec" {
+      command = "kubectl apply -f -<<EOF\n${data.template_file.externaldns.rendered}\nEOF"
+    }
+
+    provisioner "local-exec" {
+      command = "kubectl annotate -n dssg2020-staging svc proxy-public external-dns.alpha.kubernetes.io/hostname: staging.dssg.hackweek.io"
+    }
+
+  }
