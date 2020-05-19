@@ -40,15 +40,16 @@ resource "kubernetes_namespace" "support" {
   }
 }
 
-resource "kubernetes_namespace" "staging" {
-  metadata {
-    name = "staging"
-  }
-}
+# Error if already exists
+#resource "kubernetes_namespace" "staging" {
+#  metadata {
+#    name = "dssg2020-staging"
+#  }
+#}
 
 resource "kubernetes_namespace" "prod" {
   metadata {
-    name = "prod"
+    name = "dssg2020-prod"
   }
 }
 
@@ -111,7 +112,7 @@ resource "kubernetes_persistent_volume" "shared-efs-volume" {
 resource "kubernetes_persistent_volume_claim" "shared-efs-claim" {
   metadata {
     name = "shared-nfs"
-    namespace = "staging"
+    namespace = "dssg2020-staging"
   }
 
   spec {
@@ -149,7 +150,7 @@ resource "kubernetes_persistent_volume" "shared-efs-volume-prod" {
 resource "kubernetes_persistent_volume_claim" "shared-efs-claim-prod" {
   metadata {
     name = "shared-nfs"
-    namespace = "prod"
+    namespace = "dssg2020-prod"
   }
 
   spec {
